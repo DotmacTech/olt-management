@@ -68,4 +68,13 @@ export interface Onu {
   onuModelId?: string;
   createdAt: Date;
   updatedAt: Date;
+  user_id?: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role_id?: string;
+  created_at?: string;
 }
