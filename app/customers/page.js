@@ -1,8 +1,8 @@
-// app/customers/page.js
+// app/customers/page.jsx
 "use client";
 
-import CustomersPage from "@/components/customers-page";
+import CustomerManagement from "@/components/customer-management";
 
-export default function Customers() {
-  return <CustomersPage />;
+export default function CustomersPage() {
+  return <CustomerManagement />;
 }
