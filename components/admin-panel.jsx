@@ -131,9 +131,42 @@ const AdminPanel = () => {
 
   const tabs = ['Users', 'Devices', 'Locations', 'PONs', 'Permissions'];
 
+  const [editFormData, setEditFormData] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+
   const handleEdit = (user) => {
     setSelectedUser(user);
+    setEditFormData({ ...user, permissions: user.permissions || {} });
     setShowEditModal(true);
+  };
+  
+  const handleAddUser = () => {
+    setEditFormData({
+      name: '',
+      email: '',
+      role: 'User',
+      status: 'Active',
+      snmac: '',
+      location: '',
+      pon: '',
+      lastLogin: '',
+      permissions: {},
+    });
+    setSelectedUser(null);
+    setShowAddModal(true);
+  };
+
+  const handleSaveAddUser = (e) => {
+    e.preventDefault();
+    // In a real app, update state; for mock/demo, just log or refresh
+    // usersData.push({ ...editFormData, id: usersData.length + 1, created: new Date().toLocaleDateString() });
+    setShowAddModal(false);
+  };
+
+  const handleSaveEditUser = (e) => {
+    e.preventDefault();
+    // Update usersData here (mock update or real API call)
+    handleCloseModal();
   };
 
   const handleCloseModal = () => {
@@ -338,9 +371,13 @@ const AdminPanel = () => {
                 <Bell className="h-5 w-5 text-black" />
                 <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
               </Button>
-              <Button variant="ghost" size="icon">
+
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/settings">
                 <Settings className="h-5 w-5 text-black" />
+                </Link>
               </Button>
+          
               <Button variant="ghost" size="icon">
                 <HelpCircle className="h-5 w-5 text-black" />
               </Button>
@@ -356,7 +393,7 @@ const AdminPanel = () => {
               <p className="text-black">Manage users, devices, locations and network configurations</p>
             </div>
             <div className="flex items-center space-x-3">
-              <Button className="bg-green-600 hover:bg-green-700 text-white">
+              <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleAddUser}>
                 Add New User
               </Button>
               <Button variant="outline" className="bg-white text-black">
@@ -626,244 +663,320 @@ const AdminPanel = () => {
         </main>
       </div>
       
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="relative bg-white rounded-xl shadow-2xl p-8 w-full max-w-2xl pointer-events-auto">
+            <button
+              type="button"
+              className="absolute top-4 right-4 bg-white rounded-full text-gray-400 hover:text-gray-600 focus:outline-none"
+              onClick={() => setShowAddModal(false)}
+              aria-label="Close"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            <h3 className="text-2xl font-semibold text-gray-900 mb-6">Add New User</h3>
+            <form
+              onSubmit={handleSaveAddUser}
+              className="space-y-6"
+              autoComplete="off"
+            >
+              <div className="grid grid-cols-2 gap-6">
+          <div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">Name:</label>
+              <input
+                type="text"
+                value={editFormData.name}
+                onChange={e => setEditFormData({ ...editFormData, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">Email:</label>
+              <input
+                type="email"
+                value={editFormData.email || ''}
+                onChange={e => setEditFormData({ ...editFormData, email: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">Role:</label>
+              <select
+                value={editFormData.role}
+                onChange={e => setEditFormData({ ...editFormData, role: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
+              >
+                <option value="Admin">Admin</option>
+                <option value="Tech">Tech</option>
+                <option value="User">User</option>
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">Status:</label>
+              <select
+                value={editFormData.status || 'Active'}
+                onChange={e => setEditFormData({ ...editFormData, status: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Suspended">Suspended</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">SN/MAC:</label>
+              <input
+                type="text"
+                value={editFormData.snmac}
+                onChange={e => setEditFormData({ ...editFormData, snmac: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">Location:</label>
+              <input
+                type="text"
+                value={editFormData.location}
+                onChange={e => setEditFormData({ ...editFormData, location: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">PON:</label>
+              <input
+                type="text"
+                value={editFormData.pon}
+                onChange={e => setEditFormData({ ...editFormData, pon: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+          </div>
+        </div>
+        {/* Permissions (mock checkboxes) */}
+        <div>
+          <h4 className="text-base font-medium text-gray-900 mb-2">Permissions:</h4>
+          <div className="grid grid-cols-3 gap-4">
+            {['User Management', 'Network Configuration', 'Reporting', 'Device Management', 'Diagnostics', 'Billing Management'].map((perm, idx) => (
+              <div className="flex items-center" key={perm}>
+                <input
+                  type="checkbox"
+                  checked={editFormData.permissions?.[perm] || false}
+                  onChange={e =>
+                    setEditFormData({
+                      ...editFormData,
+                      permissions: {
+                        ...editFormData.permissions,
+                        [perm]: e.target.checked,
+                      },
+                    })
+                  }
+                  id={`perm-${idx}`}
+                />
+                <label htmlFor={`perm-${idx}`} className="ml-2 block text-sm text-gray-700">{perm}</label>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Actions */}
+        <div className="flex justify-end gap-3 pt-4">
+          <Button
+            type="submit"
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            Save Changes
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setEditFormData({
+              name: '',
+              email: '',
+              role: 'User',
+              status: 'Active',
+              snmac: '',
+              location: '',
+              pon: '',
+              lastLogin: '',
+              permissions: {},
+            })}
+          >
+            Reset
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowAddModal(false)}
+          >
+            Cancel
+          </Button>
+        </div>
+              {/* ...same form fields as your edit modal, but using editFormData... */}
+              {/* ...actions: Save, Reset, Cancel... */}
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Edit User Modal */}
-      {showEditModal && selectedUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={handleCloseModal}></div>
-            
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
-              <div className="absolute top-0 right-0 pt-4 pr-4">
-                <button
-                  type="button"
-                  className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
-                  onClick={handleCloseModal}
-                >
-                  <span className="sr-only">Close</span>
-                  <X className="h-6 w-6" aria-hidden="true" />
-                </button>
-              </div>
-              
-              <div className="sm:flex sm:items-start">
-                <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Edit User</h3>
-                  
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <div className="mb-4">
-                        <label className="block text-sm text-gray-500 mb-1">Name:</label>
-                        <input 
-                          type="text" 
-                          value={selectedUser.name}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                        />
-                      </div>
-                      
-                      <div className="mb-4">
-                        <label className="block text-sm text-gray-500 mb-1">Email:</label>
-                        <input 
-                          type="email"
-                          value={selectedUser.email || 'john.doe@example.com'}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                        />
-                      </div>
-                      
-                      <div className="mb-4">
-                        <label className="block text-sm text-gray-500 mb-1">Role:</label>
-                        <div className="relative">
-                          <select
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
-                            defaultValue={selectedUser.role}
-                          >
-                            <option>Administrator</option>
-                            <option>Tech</option>
-                            <option>User</option>
-                          </select>
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                            <ChevronRight className="rotate-90 h-4 w-4" />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="mb-4">
-                        <label className="block text-sm text-gray-500 mb-1">Status:</label>
-                        <div className="relative">
-                          <select
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
-                            defaultValue={selectedUser.status || 'Active'}
-                          >
-                            <option>Active</option>
-                            <option>Inactive</option>
-                            <option>Suspended</option>
-                          </select>
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                            <ChevronRight className="rotate-90 h-4 w-4" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="mb-4">
-                        <label className="block text-sm text-gray-500 mb-1">SN/MAC:</label>
-                        <input 
-                          type="text" 
-                          value={selectedUser.snmac}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                        />
-                      </div>
-                      
-                      <div className="mb-4">
-                        <label className="block text-sm text-gray-500 mb-1">Location:</label>
-                        <div className="relative">
-                          <select
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
-                            defaultValue={selectedUser.location}
-                          >
-                            <option>Head Office (North Zone)</option>
-                            <option>Smith Residence (East Zone)</option>
-                            <option>Clark Building (West Zone)</option>
-                            <option>Johnson Home (East Zone)</option>
-                            <option>Taylor House (West Zone)</option>
-                          </select>
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                              <ChevronRight className="rotate-90 h-4 w-4" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="mb-4">
-                        <label className="block text-sm text-gray-500 mb-1">PON:</label>
-                        <div className="relative">
-                          <select
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
-                            defaultValue={selectedUser.pon}
-                          >
-                            <option>OLT-North-01 P1/1/1</option>
-                            <option>OLT-East-01 P1/1/2</option>
-                            <option>OLT-West-05 P2/1/1</option>
-                            <option>OLT-East-01 P1/2/2</option>
-                            <option>OLT-West-05 P2/1/2</option>
-                          </select>
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                            <ChevronRight className="rotate-90 h-4 w-4" />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="mb-4">
-                        <label className="block text-sm text-gray-500 mb-1">Last Login:</label>
-                        <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
-                          {selectedUser.lastLogin || 'Apr 09, 2025 11:23:45'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6">
-                    <h4 className="text-base font-medium text-gray-900 mb-2">Permissions:</h4>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="flex items-center">
-                        <input 
-                          type="checkbox" 
-                          id="user-management" 
-                          className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                          defaultChecked={true}
-                        />
-                        <label htmlFor="user-management" className="ml-2 block text-sm text-gray-700">
-                          User Management
-                        </label>
-                      </div>
-                      
-                      <div className="flex items-center">
-                        <input 
-                          type="checkbox" 
-                          id="network-configuration" 
-                          className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                          defaultChecked={true}
-                        />
-                        <label htmlFor="network-configuration" className="ml-2 block text-sm text-gray-700">
-                          Network Configuration
-                        </label>
-                      </div>
-                      
-                      <div className="flex items-center">
-                        <input 
-                          type="checkbox" 
-                          id="reporting" 
-                          className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                          defaultChecked={true}
-                        />
-                        <label htmlFor="reporting" className="ml-2 block text-sm text-gray-700">
-                          Reporting
-                        </label>
-                      </div>
-                      
-                      <div className="flex items-center">
-                        <input 
-                          type="checkbox" 
-                          id="device-management" 
-                          className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                          defaultChecked={true}
-                        />
-                        <label htmlFor="device-management" className="ml-2 block text-sm text-gray-700">
-                          Device Management
-                        </label>
-                      </div>
-                      
-                      <div className="flex items-center">
-                        <input 
-                          type="checkbox" 
-                          id="diagnostics" 
-                          className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                          defaultChecked={true}
-                        />
-                        <label htmlFor="diagnostics" className="ml-2 block text-sm text-gray-700">
-                          Diagnostics
-                        </label>
-                      </div>
-                      
-                      <div className="flex items-center">
-                        <input 
-                          type="checkbox" 
-                          id="billing-management" 
-                          className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                          defaultChecked={false}
-                        />
-                        <label htmlFor="billing-management" className="ml-2 block text-sm text-gray-700">
-                          Billing Management
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-3 sm:gap-3 sm:grid-flow-row-dense">
-                <Button
-                  className="w-full sm:col-start-1 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  Save Changes
-                </Button>
-                <Button
-                  variant="outline"
-                  className="mt-3 w-full sm:mt-0 sm:col-start-2"
-                  onClick={handleCloseModal}
-                >
-                  Reset
-                </Button>
-                <Button
-                  variant="outline"
-                  className="mt-3 w-full sm:mt-0 sm:col-start-3"
-                  onClick={handleCloseModal}
-                >
-                  Cancel
-                </Button>
+{showEditModal && selectedUser && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+    <div className="relative bg-white rounded-xl shadow-2xl p-8 w-full max-w-2xl pointer-events-auto">
+      {/* Close Button */}
+      <button
+        type="button"
+        className="absolute top-4 right-4 bg-white rounded-full text-gray-400 hover:text-gray-600 focus:outline-none"
+        onClick={handleCloseModal}
+        aria-label="Close"
+      >
+        <X className="h-6 w-6" />
+      </button>
+      <h3 className="text-2xl font-semibold text-gray-900 mb-6">Edit User</h3>
+      <form
+        onSubmit={handleSaveEditUser}
+        className="space-y-6"
+        autoComplete="off"
+      >
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">Name:</label>
+              <input
+                type="text"
+                value={editFormData.name}
+                onChange={e => setEditFormData({ ...editFormData, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">Email:</label>
+              <input
+                type="email"
+                value={editFormData.email || ''}
+                onChange={e => setEditFormData({ ...editFormData, email: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">Role:</label>
+              <select
+                value={editFormData.role}
+                onChange={e => setEditFormData({ ...editFormData, role: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
+              >
+                <option value="Admin">Admin</option>
+                <option value="Tech">Tech</option>
+                <option value="User">User</option>
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">Status:</label>
+              <select
+                value={editFormData.status || 'Active'}
+                onChange={e => setEditFormData({ ...editFormData, status: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Suspended">Suspended</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">SN/MAC:</label>
+              <input
+                type="text"
+                value={editFormData.snmac}
+                onChange={e => setEditFormData({ ...editFormData, snmac: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">Location:</label>
+              <input
+                type="text"
+                value={editFormData.location}
+                onChange={e => setEditFormData({ ...editFormData, location: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">PON:</label>
+              <input
+                type="text"
+                value={editFormData.pon}
+                onChange={e => setEditFormData({ ...editFormData, pon: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-500 mb-1">Last Login:</label>
+              <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
+                {editFormData.lastLogin || '—'}
               </div>
             </div>
           </div>
-      )}
+        </div>
+        {/* Permissions (mock checkboxes) */}
+        <div>
+          <h4 className="text-base font-medium text-gray-900 mb-2">Permissions:</h4>
+          <div className="grid grid-cols-3 gap-4">
+            {['User Management', 'Network Configuration', 'Reporting', 'Device Management', 'Diagnostics', 'Billing Management'].map((perm, idx) => (
+              <div className="flex items-center" key={perm}>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  checked={editFormData.permissions?.[perm] || false}
+                  onChange={e =>
+                    setEditFormData({
+                      ...editFormData,
+                      permissions: {
+                        ...editFormData.permissions,
+                        [perm]: e.target.checked,
+                      },
+                    })
+                  }
+                  id={`perm-${idx}`}
+                />
+                <label htmlFor={`perm-${idx}`} className="ml-2 block text-sm text-gray-700">{perm}</label>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Actions */}
+        <div className="flex justify-end gap-3 pt-4">
+          <Button
+            type="submit"
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            Save Changes
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setEditFormData({ ...selectedUser })}
+          >
+            Reset
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCloseModal}
+          >
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
     </div>
   );
 };

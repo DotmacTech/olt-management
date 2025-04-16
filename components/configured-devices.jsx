@@ -392,8 +392,10 @@ const ConfiguredDevices = () => {
                 <Bell className="h-5 w-5 text-black" />
                 <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
               </Button>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/settings">
                 <Settings className="h-5 w-5 text-black" />
+                </Link>
               </Button>
               <Button variant="ghost" size="icon">
                 <HelpCircle className="h-5 w-5 text-black" />
@@ -410,10 +412,7 @@ const ConfiguredDevices = () => {
               <p className="text-black">View and manage all provisioned network devices</p>
             </div>
             <div className="flex items-center gap-3">
-              <Button className="bg-green-500 hover:bg-green-600 text-white">
-                Configure
-              </Button>
-              <Button variant="outline" className="bg-white text-black">
+              <Button variant="outline" className="bg-green-500 hover:bg-green-600 text-white">
                 Export
               </Button>
             </div>

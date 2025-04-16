@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import AddOLTModal from './add-olt-form';
 import { 
   Search, 
   ChevronRight, 
@@ -122,6 +123,7 @@ const oltDetails = {
 const OLTManagement = () => {
   const [selectedOlt, setSelectedOlt] = useState(oltDetails);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isAddOltModalOpen, setIsAddOltModalOpen] = useState(false);
   const totalPages = Math.ceil(oltDevices.length / 7);
 
   const handleSelectOlt = (oltId) => {
@@ -300,8 +302,10 @@ const OLTManagement = () => {
                 <Bell className="h-5 w-5 text-black" />
                 <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
               </Button>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/settings">
                 <Settings className="h-5 w-5 text-black" />
+                </Link>
               </Button>
               <Button variant="ghost" size="icon">
                 <HelpCircle className="h-5 w-5 text-black" />
@@ -318,7 +322,10 @@ const OLTManagement = () => {
               <p className="text-black">Manage and monitor your Optical Line Terminals</p>
             </div>
             <div className="flex items-center space-x-3">
-              <Button className="bg-green-500 hover:bg-green-600 text-white flex items-center">
+              <Button 
+                className="bg-green-500 hover:bg-green-600 text-white flex items-center"
+                onClick={() => setIsAddOltModalOpen(true)}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add New OLT
               </Button>
@@ -577,6 +584,15 @@ const OLTManagement = () => {
             </div>
           </div>
         </main>
+
+        <AddOLTModal 
+          isOpen={isAddOltModalOpen}
+          onClose={() => setIsAddOltModalOpen(false)}
+          onAdd={(newOlt) => {
+            // Handle adding new OLT here
+            console.log('New OLT:', newOlt);
+          }}
+        />
       </div>
     </div>
   );

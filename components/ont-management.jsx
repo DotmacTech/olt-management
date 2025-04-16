@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import AddONTModal from './add-ont-form';
 import { 
   Search, 
   ChevronRight, 
@@ -125,6 +126,7 @@ const ontDetails = {
 const ONTManagement = () => {
   const [selectedOnt, setSelectedOnt] = useState(ontDetails);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isAddOntModalOpen, setIsAddOntModalOpen] = useState(false);
   const totalItems = 128;
   const itemsPerPage = 7;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -305,8 +307,10 @@ const ONTManagement = () => {
                 <Bell className="h-5 w-5 text-black" />
                 <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
               </Button>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/settings">
                 <Settings className="h-5 w-5 text-black" />
+                </Link>
               </Button>
               <Button variant="ghost" size="icon">
                 <HelpCircle className="h-5 w-5 text-black" />
@@ -323,7 +327,10 @@ const ONTManagement = () => {
               <p className="text-black">Manage and monitor your Optical Network Terminals</p>
             </div>
             <div className="flex items-center space-x-3">
-              <Button className="bg-green-500 hover:bg-green-600 text-white flex items-center">
+            <Button 
+                className="bg-green-500 hover:bg-green-600 text-white flex items-center"
+                onClick={() => setIsAddOntModalOpen(true)}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add New ONT
               </Button>
@@ -568,6 +575,14 @@ const ONTManagement = () => {
             </div>
           </div>
         </main>
+        <AddONTModal 
+          isOpen={isAddOntModalOpen}
+          onClose={() => setIsAddOntModalOpen(false)}
+          onAdd={(newOnt) => {
+            // Handle adding new ONT here
+            console.log('New ONT:', newOnt);
+          }}
+        />
       </div>
     </div>
   );

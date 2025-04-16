@@ -383,8 +383,10 @@ const NetworkDiagnostics = () => {
                 <Bell className="h-5 w-5 text-black" />
                 <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
               </Button>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/settings">
                 <Settings className="h-5 w-5 text-black" />
+                </Link>
               </Button>
               <Button variant="ghost" size="icon">
                 <HelpCircle className="h-5 w-5 text-black" />

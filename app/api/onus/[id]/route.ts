@@ -20,15 +20,33 @@ export async function GET({ params }: { params: { id: string } }) {
 }
 
 //  Update ONU Info (PUT)
-export async function PUT({ params, request }: { params: { id: string }, request: Request }) {
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     const body = await request.json();
     const { id } = params;
-    const { name, serial_number, model, status, ip_address, mac_address } = body;
+    const {
+      name,
+      serialnumber,
+      model,
+      status,
+      ip_address,
+      mac_address
+    } = body;
 
     const { data, error } = await supabase
       .from('Onu')
-      .update({ name, serial_number, model, status, ip_address, mac_address, updated_at: new Date().toISOString() })
+      .update({
+        name,
+        serialnumber,
+        model,
+        status,
+        ip_address,
+        mac_address,
+        updatedat: new Date().toISOString()
+      })
       .eq('id', id)
       .select()
       .single();
@@ -43,10 +61,14 @@ export async function PUT({ params, request }: { params: { id: string }, request
 }
 
 // Delete ONU (DELETE)
-export async function DELETE({ params }: { params: { id: string } }) {
+export async function DELETE(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     const { id } = params;
-    const { data, error } = await supabase
+
+    const { error } = await supabase
       .from('Onu')
       .delete()
       .eq('id', id);
