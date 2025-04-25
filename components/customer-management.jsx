@@ -26,7 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
-
+import LogoutButton from '@/components/logoutButton';
 // Mock data for customers
 const customersData = [
   { 
@@ -368,10 +368,7 @@ const CustomerManagement = () => {
               <div className="text-xs text-gray-300">Administrator</div>
             </div>
           </div>
-          <Button variant="ghost" className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg">
-            <LogOut className="mr-2 h-5 w-5" />
-            Log Out
-          </Button>
+          <LogoutButton />
         </div>
       </div>
       
@@ -841,19 +838,19 @@ const CustomerManagement = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-gray-500">Customer ID</p>
-                      <p className="font-medium">CUST-{String(selectedCustomer.id).padStart(4, '0')}</p>
+                      <p className="font-medium text-black">CUST-{String(selectedCustomer.id).padStart(4, '0')}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Contact</p>
-                      <p className="font-medium">+234 800 123 4567</p>
+                      <p className="font-medium text-black">+234 800 123 4567</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium">{selectedCustomer.name.toLowerCase().replace(/\s+/g, '.')}@example.com</p>
+                      <p className="font-medium text-black">{selectedCustomer.name.toLowerCase().replace(/\s+/g, '.')}@example.com</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Added Date</p>
-                      <p className="font-medium">{selectedCustomer.authDate}</p>
+                      <p className="font-medium text-black">{selectedCustomer.authDate}</p>
                     </div>
                   </div>
                 </div>
@@ -863,27 +860,27 @@ const CustomerManagement = () => {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <p className="text-sm text-gray-500">SN/MAC</p>
-                      <p className="font-medium">{selectedCustomer.snmac}</p>
+                      <p className="font-medium text-black">{selectedCustomer.snmac}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">ONU</p>
-                      <p className="font-medium">{selectedCustomer.onu}</p>
+                      <p className="font-medium text-black">{selectedCustomer.onu}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Zone</p>
-                      <p className="font-medium">{selectedCustomer.zone}</p>
+                      <p className="font-medium text-black">{selectedCustomer.zone}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Bandwidth/Rate</p>
-                      <p className="font-medium">{selectedCustomer.br}</p>
+                      <p className="font-medium text-black">{selectedCustomer.br}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">VLAN</p>
-                      <p className="font-medium">{selectedCustomer.vlan}</p>
+                      <p className="font-medium text-black">{selectedCustomer.vlan}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Device Type</p>
-                      <p className="font-medium">{selectedCustomer.type}</p>
+                      <p className="font-medium text-black">{selectedCustomer.type}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Signal Quality</p>
@@ -906,11 +903,11 @@ const CustomerManagement = () => {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <p className="text-sm text-gray-500">Package</p>
-                      <p className="font-medium">Premium Fiber 50Mbps</p>
+                      <p className="font-medium text-black">Premium Fiber 50Mbps</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Monthly Fee</p>
-                      <p className="font-medium">₦45,000</p>
+                      <p className="font-medium text-black">₦45,000</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Payment Status</p>
@@ -920,18 +917,18 @@ const CustomerManagement = () => {
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Next Billing</p>
-                      <p className="font-medium">May 10, 2025</p>
+                      <p className="font-medium text-black">May 10, 2025</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Additional Services</p>
-                      <p className="font-medium">
+                      <p className="font-medium text-black">
                         {selectedCustomer.id % 2 === 0 ? 'IPTV, Static IP' : 'None'}
                       </p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="mt-6 flex justify-end space-x-3">
+                <div className="mt-6 flex justisy-end space-x-3">
                   <Button
                     variant="outline"
                     className="bg-white text-black"

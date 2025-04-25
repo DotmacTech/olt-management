@@ -43,7 +43,7 @@ export function NetworkTrafficChart() {
           dataKey="download" 
           stroke="#3b82f6" 
           strokeWidth={3}
-          name="Download"
+          name="Online"
           dot={false}
           activeDot={{ r: 6, fill: '#3b82f6', stroke: 'white', strokeWidth: 2 }}
         />
@@ -52,7 +52,7 @@ export function NetworkTrafficChart() {
           dataKey="upload" 
           stroke="#f97316" 
           strokeWidth={3}
-          name="Upload"
+          name="Offline"
           dot={false}
           activeDot={{ r: 6, fill: '#f97316', stroke: 'white', strokeWidth: 2 }}
         />

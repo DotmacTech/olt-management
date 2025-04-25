@@ -1,3 +1,4 @@
+// Handles /api/users GET & POST
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { User } from '@/types';

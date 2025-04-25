@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from "next/link";
 import { 
   Card, 
@@ -27,8 +27,8 @@ import {
   FileText,
   Settings2,
   MoreVertical
-
 } from "lucide-react";
+//import { runAllTests, createTestData } from '@/lib/supabase-troubleshooting';
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,9 +37,16 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NetworkTrafficChart } from "@/components/charts/network-traffic";
 import { BandwidthUtilizationChart } from "@/components/charts/bandwidth-utilization";
 import { useNetworkData } from "@/contexts/data-context";
+import LogoutButton from '@/components/logoutButton';
+import { OltStatusModal } from '@/components/modals/OltStatusModal';
+import { AlertsModal } from '@/components/modals/AlertsModal';
 
 const NetworkDashboard = () => {
   const data = useNetworkData();
+  
+  // State for modals
+  const [isOltModalOpen, setIsOltModalOpen] = useState(false);
+  const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -188,10 +195,7 @@ const NetworkDashboard = () => {
               <div className="text-xs text-gray-300">Administrator</div>
             </div>
           </div>
-          <Button variant="ghost" className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg">
-            <LogOut className="mr-2 h-5 w-5" />
-            Log Out
-          </Button>
+          <LogoutButton />
         </div>
       </div>
       
@@ -314,15 +318,15 @@ const NetworkDashboard = () => {
             {/* Network Traffic Chart */}
             <Card className="lg:col-span-3">
               <CardHeader className="flex flex-row items-center justify-between pb-2 text-black">
-                <CardTitle>Network Traffic</CardTitle>
+                <CardTitle>Uptime Trend</CardTitle>
                 <div className="flex items-center space-x-2">
                   <Badge className="bg-blue-100 text-blue-600 flex items-center">
                     <span className="h-2 w-2 rounded-full bg-blue-600 mr-1"></span>
-                    Download
+                    Online
                   </Badge>
                   <Badge className="bg-orange-100 text-orange-600 flex items-center">
                     <span className="h-2 w-2 rounded-full bg-orange-500 mr-1"></span>
-                    Upload
+                    Offline
                   </Badge>
                 </div>
               </CardHeader>
@@ -348,7 +352,13 @@ const NetworkDashboard = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2 text-black">
                 <CardTitle>OLT Status</CardTitle>
-                <Button variant="link" className="text-blue-600">View All</Button>
+                <Button 
+                  variant="link" 
+                  className="text-blue-600"
+                  onClick={() => setIsOltModalOpen(true)}
+                >
+                  View All
+                </Button>
               </CardHeader>
               <CardContent className="overflow-x-auto">
                 <div className="min-w-full">
@@ -409,7 +419,13 @@ const NetworkDashboard = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2 text-black">
                 <CardTitle>Recent Alerts</CardTitle>
-                <Button variant="link" className="text-blue-600">View All</Button>
+                <Button 
+                  variant="link" 
+                  className="text-blue-600"
+                  onClick={() => setIsAlertsModalOpen(true)}
+                >
+                  View All
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -443,6 +459,17 @@ const NetworkDashboard = () => {
           </div>
         </main>
       </div>
+      
+      {/* Modals */}
+      <OltStatusModal 
+        isOpen={isOltModalOpen} 
+        onClose={() => setIsOltModalOpen(false)}
+      />
+      
+      <AlertsModal 
+        isOpen={isAlertsModalOpen} 
+        onClose={() => setIsAlertsModalOpen(false)}
+      />
     </div>
   );
 };

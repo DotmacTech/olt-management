@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+
 export async function POST() {
   try {
     // Simulate discovery
@@ -25,4 +26,10 @@ export async function POST() {
     console.error('Discovery error:', err);
     return NextResponse.json({ error: 'Discovery failed' }, { status: 500 });
   }
+
+  
 }
+
+
+
+  

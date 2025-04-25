@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
-import { 
-  Search, 
+import React, { useState, useEffect } from 'react';
+import {
+  Search,
   Bell,
   Settings,
   HelpCircle,
@@ -28,96 +28,40 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
-
-// Mock data for users
-const usersData = [
-  { 
-    id: 1, 
-    name: 'John Doe', 
-    role: 'Admin', 
-    snmac: '00:1A:2B:3C:4D:5E', 
-    location: 'Head Office (North Zone)', 
-    pon: 'OLT-North-01 P1/1/1', 
-    created: 'Apr 01, 2025',
-    email: 'john.doe@example.com',
-    status: 'Active',
-    lastLogin: 'Apr 09, 2025 11:23:45'
-  },
-  { 
-    id: 2, 
-    name: 'Sarah Adams', 
-    role: 'Tech', 
-    snmac: '00:2C:3D:4E:5F:6G', 
-    location: 'Smith Residence (East Zone)', 
-    pon: 'OLT-East-01 P1/1/2', 
-    created: 'Mar 15, 2025'
-  },
-  { 
-    id: 3, 
-    name: 'Tom Wilson', 
-    role: 'Tech', 
-    snmac: '00:3D:4E:5F:6G:7H', 
-    location: 'Clark Building (West Zone)', 
-    pon: 'OLT-West-05 P2/1/1', 
-    created: 'Mar 10, 2025'
-  },
-  { 
-    id: 4, 
-    name: 'Maria Rodriguez', 
-    role: 'Tech', 
-    snmac: '00:4E:5F:6G:7H:8I', 
-    location: 'Johnson Home (East Zone)', 
-    pon: 'OLT-East-01 P1/2/2', 
-    created: 'Feb 28, 2025'
-  },
-  { 
-    id: 5, 
-    name: 'Alex Johnson', 
-    role: 'User', 
-    snmac: '00:5F:6G:7H:8I:9J', 
-    location: 'Taylor House (West Zone)', 
-    pon: 'OLT-West-05 P2/1/2', 
-    created: 'Feb 22, 2025'
-  },
-  { 
-    id: 6, 
-    name: 'David Martinez', 
-    role: 'Tech', 
-    snmac: '00:6G:7H:8I:9J:0K', 
-    location: 'Davis Office (East Zone)', 
-    pon: 'OLT-East-01 P1/3/1', 
-    created: 'Feb 15, 2025'
-  },
-  { 
-    id: 7, 
-    name: 'Emma Wilson', 
-    role: 'User', 
-    snmac: '00:7H:8I:9J:0K:1L', 
-    location: 'Brown Building (West Zone)', 
-    pon: 'OLT-West-05 P2/2/1', 
-    created: 'Feb 10, 2025'
-  },
-  { 
-    id: 8, 
-    name: 'Robert Chen', 
-    role: 'User', 
-    snmac: '00:8I:9J:0K:1L:2M', 
-    location: 'Anderson Office (South Zone)', 
-    pon: 'OLT-South-02 P4/1/1', 
-    created: 'Feb 05, 2025'
-  },
-  { 
-    id: 9, 
-    name: 'Linda Parker', 
-    role: 'User', 
-    snmac: '00:9J:0K:1L:2M:3N', 
-    location: 'Clark Building (South Zone)', 
-    pon: 'OLT-South-02 P4/1/2', 
-    created: 'Jan 28, 2025'
-  }
-];
+import { sendPasswordResetEmail } from "../scripts/smtp-email";
+import CommunicationSettings from "../scripts/communication-settings";
+import { getCommunicationSettings, upsertCommunicationSettings } from "../scripts/supabase-comm";
+import { getUsers, addUser, updateUser, deleteUser } from "../scripts/supabase-users";
+import LogoutButton from '@/components/logoutButton';
+const smtpConfig = {
+  host: "smtp.example.com",
+  port: 465,
+  username: "admin@example.com",
+  password: "yourpassword",
+  from: "admin@example.com",
+};
 
 const AdminPanel = () => {
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [usersError, setUsersError] = useState(null);
+
+  useEffect(() => {
+    async function fetchUsers() {
+      setLoadingUsers(true);
+      setUsersError(null);
+      try {
+        const data = await getUsers();
+        setUsers(data || []);
+      } catch (err) {
+        setUsersError("Failed to load users");
+      } finally {
+        setLoadingUsers(false);
+      }
+    }
+    fetchUsers();
+  }, []);
+
   const [activeTab, setActiveTab] = useState('Users');
   const [currentPage, setCurrentPage] = useState(1);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -129,44 +73,137 @@ const AdminPanel = () => {
   const itemsPerPage = 9;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  const tabs = ['Users', 'Devices', 'Locations', 'PONs', 'Permissions'];
+  const tabs = ['Users', 'Devices', 'Locations', 'PONs', 'Permissions', 'Communication'];
 
   const [editFormData, setEditFormData] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [resettingUserId, setResettingUserId] = useState(null);
+  const [resetStatus, setResetStatus] = useState({});
+  // Communication settings state
+  const [smtpConfig, setSmtpConfig] = useState({
+    host: "",
+    port: 465,
+    username: "",
+    password: "",
+    from: "",
+  });
+  const [welcomeTemplate, setWelcomeTemplate] = useState("");
+  const [resetTemplate, setResetTemplate] = useState("");
+  const [loadingComm, setLoadingComm] = useState(true);
+  const [commError, setCommError] = useState("");
+
+  // Load communication settings from Supabase on mount
+  React.useEffect(() => {
+    async function fetchCommSettings() {
+      setLoadingComm(true);
+      setCommError("");
+      try {
+        const data = await getCommunicationSettings();
+        if (data) {
+          setSmtpConfig(data.smtp || {});
+          setWelcomeTemplate(data.welcome_template || "");
+          setResetTemplate(data.reset_template || "");
+        }
+      } catch (err) {
+        setCommError("Failed to load communication settings");
+      } finally {
+        setLoadingComm(false);
+      }
+    }
+    fetchCommSettings();
+  }, []);
+
+  // Save communication settings to Supabase
+  const handleSaveCommunicationSettings = async ({ smtp, welcomeMessage, resetMessage }) => {
+    setSmtpConfig(smtp);
+    setWelcomeTemplate(welcomeMessage);
+    setResetTemplate(resetMessage);
+    try {
+      await upsertCommunicationSettings({
+        smtp,
+        welcome_template: welcomeMessage,
+        reset_template: resetMessage,
+      });
+    } catch (err) {
+      // Optionally handle error
+    }
+  };
 
   const handleEdit = (user) => {
     setSelectedUser(user);
-    setEditFormData({ ...user, permissions: user.permissions || {} });
+    setEditFormData({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role_id: user.role_id,
+    });
     setShowEditModal(true);
   };
-  
+
   const handleAddUser = () => {
     setEditFormData({
       name: '',
       email: '',
-      role: 'User',
-      status: 'Active',
-      snmac: '',
-      location: '',
-      pon: '',
-      lastLogin: '',
-      permissions: {},
+      role_id: 'User',
     });
     setSelectedUser(null);
     setShowAddModal(true);
   };
 
-  const handleSaveAddUser = (e) => {
+  const handleSaveAddUser = async (e) => {
     e.preventDefault();
-    // In a real app, update state; for mock/demo, just log or refresh
-    // usersData.push({ ...editFormData, id: usersData.length + 1, created: new Date().toLocaleDateString() });
-    setShowAddModal(false);
+    try {
+      await addUser({
+        name: editFormData.name,
+        email: editFormData.email,
+        role_id: editFormData.role_id,
+      });
+      setShowAddModal(false);
+      // Refresh users list
+      setLoadingUsers(true);
+      const data = await getUsers();
+      setUsers(data || []);
+    } catch (err) {
+      alert("Failed to add user: " + (err.message || err));
+    } finally {
+      setLoadingUsers(false);
+    }
   };
 
-  const handleSaveEditUser = (e) => {
+  const handleSaveEditUser = async (e) => {
     e.preventDefault();
-    // Update usersData here (mock update or real API call)
-    handleCloseModal();
+    try {
+      await updateUser({
+        id: editFormData.id,
+        name: editFormData.name,
+        email: editFormData.email,
+        role_id: editFormData.role_id,
+      });
+      handleCloseModal();
+      // Refresh users list
+      setLoadingUsers(true);
+      const data = await getUsers();
+      setUsers(data || []);
+    } catch (err) {
+      alert("Failed to update user: " + (err.message || err));
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleDeleteUser = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    try {
+      await deleteUser(id);
+      // Refresh users list
+      setLoadingUsers(true);
+      const data = await getUsers();
+      setUsers(data || []);
+    } catch (err) {
+      alert("Failed to delete user: " + (err.message || err));
+    } finally {
+      setLoadingUsers(false);
+    }
   };
 
   const handleCloseModal = () => {
@@ -186,7 +223,7 @@ const AdminPanel = () => {
   };
 
   const getRoleBadgeClass = (role) => {
-    switch(role) {
+    switch (role) {
       case 'Admin':
         return 'bg-blue-100 text-blue-700';
       case 'Tech':
@@ -208,12 +245,12 @@ const AdminPanel = () => {
           </div>
           <span className="font-bold text-xl">DOTMAC</span>
         </div>
-        
+
         <nav className="flex-1 overflow-y-auto">
           <div className="p-2">
-            <Button 
-              variant="ghost" 
-            className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
               <Link href="/dashboard">
@@ -221,10 +258,10 @@ const AdminPanel = () => {
                 Dashboard
               </Link>
             </Button>
-        
-            
-            <Button 
-              variant="ghost" 
+
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -233,9 +270,9 @@ const AdminPanel = () => {
                 Customers
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -244,9 +281,9 @@ const AdminPanel = () => {
                 OLT Management
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -255,9 +292,9 @@ const AdminPanel = () => {
                 ONT Management
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -266,9 +303,9 @@ const AdminPanel = () => {
                 Network Maps
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -277,9 +314,9 @@ const AdminPanel = () => {
                 Graphs
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -288,9 +325,9 @@ const AdminPanel = () => {
                 Configured
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -299,9 +336,9 @@ const AdminPanel = () => {
                 Unconfigured
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -310,9 +347,9 @@ const AdminPanel = () => {
                 Diagnostics
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -321,10 +358,10 @@ const AdminPanel = () => {
                 Reports
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
-               className="w-full justify-start bg-green-700 text-white hover:bg-green-600 hover:text-white px-4 py-2 rounded-lg mb-1"
+
+            <Button
+              variant="ghost"
+              className="w-full justify-start bg-green-700 text-white hover:bg-green-600 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
               <Link href="/admin">
@@ -334,8 +371,8 @@ const AdminPanel = () => {
             </Button>
           </div>
         </nav>
-        
-        
+
+
         <div className="p-4 border-t border-green-700">
           <div className="flex items-center space-x-3 mb-3">
             <Avatar className="h-10 w-10 bg-green-500">
@@ -346,13 +383,10 @@ const AdminPanel = () => {
               <div className="text-xs text-gray-300">Administrator</div>
             </div>
           </div>
-          <Button variant="ghost" className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg">
-            <LogOut className="mr-2 h-5 w-5" />
-            Log Out
-          </Button>
+        <LogoutButton />
         </div>
       </div>
-      
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Navigation */}
@@ -374,17 +408,17 @@ const AdminPanel = () => {
 
               <Button variant="ghost" size="icon" asChild>
                 <Link href="/settings">
-                <Settings className="h-5 w-5 text-black" />
+                  <Settings className="h-5 w-5 text-black" />
                 </Link>
               </Button>
-          
+
               <Button variant="ghost" size="icon">
                 <HelpCircle className="h-5 w-5 text-black" />
               </Button>
             </div>
           </div>
         </header>
-        
+
         {/* Main Admin Content */}
         <main className="flex-1 overflow-y-auto p-6 bg-gray-100">
           <div className="flex items-center justify-between mb-6">
@@ -401,7 +435,7 @@ const AdminPanel = () => {
               </Button>
             </div>
           </div>
-          
+
           {/* Admin Tabs */}
           <div className="bg-white rounded-md mb-6">
             <div className="border-b border-gray-200">
@@ -412,8 +446,8 @@ const AdminPanel = () => {
                     onClick={() => setActiveTab(tab)}
                     className={`
                       px-6 py-3 text-sm font-medium
-                      ${activeTab === tab 
-                        ? 'border-b-2 border-green-600 text-green-600' 
+                      ${activeTab === tab
+                        ? 'border-b-2 border-green-600 text-green-600'
                         : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }
                     `}
@@ -424,14 +458,14 @@ const AdminPanel = () => {
               </nav>
             </div>
           </div>
-          
+
           {/* Filters */}
           <div className="bg-white rounded-md p-4 mb-6">
             <div className="flex flex-wrap gap-4 items-center">
               <div className="text-black font-medium">Filter By:</div>
-              
+
               <div className="flex items-center space-x-2">
-                <select 
+                <select
                   value={filterRole}
                   onChange={(e) => setFilterRole(e.target.value)}
                   className="border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -441,8 +475,8 @@ const AdminPanel = () => {
                   <option>Tech</option>
                   <option>User</option>
                 </select>
-                
-                <select 
+
+                <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -451,8 +485,8 @@ const AdminPanel = () => {
                   <option>Inactive</option>
                   <option>Suspended</option>
                 </select>
-                
-                <select 
+
+                <select
                   value={filterDate}
                   onChange={(e) => setFilterDate(e.target.value)}
                   className="border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -464,22 +498,22 @@ const AdminPanel = () => {
                   <option>Last 90 days</option>
                 </select>
               </div>
-              
-              <Button 
+
+              <Button
                 className="bg-green-600 hover:bg-green-700 text-white"
                 onClick={handleApplyFilters}
               >
                 Apply
               </Button>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="text-black"
                 onClick={handleResetFilters}
               >
                 Reset
               </Button>
-              
+
               <div className="ml-auto">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -492,7 +526,7 @@ const AdminPanel = () => {
               </div>
             </div>
           </div>
-          
+
           {/* Users Table */}
           <div className="bg-white rounded-md shadow-sm overflow-hidden mb-4">
             <div className="overflow-x-auto">
@@ -500,22 +534,19 @@ const AdminPanel = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      ID
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       NAME
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      ROLE
+                      EMAIL
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      SN/MAC
+                      ROLE ID
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      LOCATION
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      PON
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      CREATED
+                      CREATED AT
                     </th>
                     <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       ACTION
@@ -523,49 +554,76 @@ const AdminPanel = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {usersData.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-black">
-                        {user.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeClass(user.role)}`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-black">
-                        {user.snmac}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-black">
-                        {user.location}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-black">
-                        {user.pon}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-black">
-                        {user.created}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="flex justify-center space-x-2">
-                          <button
-                            className="text-green-600 hover:text-green-800 text-sm font-medium"
-                            onClick={() => handleEdit(user)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="text-red-600 hover:text-red-800 text-sm font-medium"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+  {activeTab === 'Users' ? (
+    loadingUsers ? (
+      <tr><td colSpan="100%" className="p-6 text-center">Loading users...</td></tr>
+    ) : usersError ? (
+      <tr><td colSpan="100%" className="p-6 text-center text-red-600">{usersError}</td></tr>
+    ) : users.length === 0 ? (
+      <tr><td colSpan="100%" className="p-6 text-center">No users found.</td></tr>
+    ) : (
+      users.map((user) => (
+        <tr key={user.id} className="hover:bg-gray-50">
+          <td className="px-6 py-4 whitespace-nowrap text-black">
+            {user.id}
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap text-black">
+            {user.name}
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap text-black">
+            {user.email}
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap text-black">
+            <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getRoleBadgeClass(user.role_id)}`}>
+              {user.role_id}
+            </span>
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap text-black">
+            {user.created_at ? new Date(user.created_at).toLocaleString() : ''}
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap text-center">
+            <div className="flex justify-center space-x-2">
+              <Button size="sm" variant="outline" onClick={() => handleEdit(user)}>
+                Edit
+              </Button>
+              <Button size="sm" variant="destructive" className="bg-red-600 hover:bg-red-700 text-white transition-colors duration-150" onClick={() => handleDeleteUser(user.id)}>
+                Delete
+              </Button>
+              <Button size="sm" variant="secondary" className="bg-green-700 hover:bg-green-800 text-white transition-colors duration-150" onClick={() => handleResetPassword(user.id)} disabled={resettingUserId === user.id}>
+                {resettingUserId === user.id ? "Sending..." : "Reset Password"}
+              </Button>
+              {resetStatus[user.id] && (
+                <div className="text-xs mt-1 text-gray-700">{resetStatus[user.id]}</div>
+              )}
+            </div>
+          </td>
+        </tr>
+      ))
+    )
+  ) : activeTab === 'Communication' ? (
+    <tr key="communication-settings-row">
+      <td colSpan="100%">
+        {loadingComm ? (
+          <div className="p-6 text-center">Loading communication settings...</div>
+        ) : commError ? (
+          <div className="p-6 text-center text-red-600">{commError}</div>
+        ) : (
+          <div>
+            <CommunicationSettings
+              initialSmtp={smtpConfig}
+              initialWelcomeMessage={welcomeTemplate}
+              initialResetMessage={resetTemplate}
+              onSave={handleSaveCommunicationSettings}
+            />
+          </div>
+        )}
+      </td>
+    </tr>
+  ) : null}
+</tbody>
               </table>
             </div>
-            
+
             {/* Pagination */}
             <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
               <div className="text-sm text-gray-700">
@@ -573,79 +631,75 @@ const AdminPanel = () => {
               </div>
               <div>
                 <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                     disabled={currentPage === 1}
                   >
                     <span className="sr-only">Previous</span>
                     &lt;
                   </Button>
-                  
-                  <Button 
-                    variant={currentPage === 1 ? 'default' : 'outline'} 
-                    size="sm" 
-                    className={`relative inline-flex items-center px-4 py-2 border ${
-                      currentPage === 1 
-                        ? 'bg-green-600 text-white border-green-600' 
+
+                  <Button
+                    variant={currentPage === 1 ? 'default' : 'outline'}
+                    size="sm"
+                    className={`relative inline-flex items-center px-4 py-2 border ${currentPage === 1
+                        ? 'bg-green-600 text-white border-green-600'
                         : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                     onClick={() => setCurrentPage(1)}
                   >
                     1
                   </Button>
-                  
-                  <Button 
-                    variant={currentPage === 2 ? 'default' : 'outline'} 
-                    size="sm" 
-                    className={`relative inline-flex items-center px-4 py-2 border ${
-                      currentPage === 2 
-                        ? 'bg-green-600 text-white border-green-600' 
+
+                  <Button
+                    variant={currentPage === 2 ? 'default' : 'outline'}
+                    size="sm"
+                    className={`relative inline-flex items-center px-4 py-2 border ${currentPage === 2
+                        ? 'bg-green-600 text-white border-green-600'
                         : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                     onClick={() => setCurrentPage(2)}
                   >
                     2
                   </Button>
-                  
-                  <Button 
-                    variant={currentPage === 3 ? 'default' : 'outline'} 
-                    size="sm" 
-                    className={`relative inline-flex items-center px-4 py-2 border ${
-                      currentPage === 3 
-                        ? 'bg-green-600 text-white border-green-600' 
+
+                  <Button
+                    variant={currentPage === 3 ? 'default' : 'outline'}
+                    size="sm"
+                    className={`relative inline-flex items-center px-4 py-2 border ${currentPage === 3
+                        ? 'bg-green-600 text-white border-green-600'
                         : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                     onClick={() => setCurrentPage(3)}
                   >
                     3
                   </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
                   >
                     ...
                   </Button>
-                  
-                  <Button 
-                    variant={currentPage === 16 ? 'default' : 'outline'} 
-                    size="sm" 
-                    className={`relative inline-flex items-center px-4 py-2 border ${
-                      currentPage === 16 
-                        ? 'bg-green-600 text-white border-green-600' 
+
+                  <Button
+                    variant={currentPage === 16 ? 'default' : 'outline'}
+                    size="sm"
+                    className={`relative inline-flex items-center px-4 py-2 border ${currentPage === 16
+                        ? 'bg-green-600 text-white border-green-600'
                         : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                     onClick={() => setCurrentPage(16)}
                   >
                     16
                   </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                     disabled={currentPage === 16}
                   >
@@ -656,13 +710,13 @@ const AdminPanel = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="text-center text-sm text-black">
-            © 2025 DOTMAC Network Management System v4.2.1
+            &copy; 2025 DOTMAC Network Management System v4.2.1
           </div>
         </main>
       </div>
-      
+
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
           <div className="relative bg-white rounded-xl shadow-2xl p-8 w-full max-w-2xl pointer-events-auto">
@@ -681,304 +735,161 @@ const AdminPanel = () => {
               autoComplete="off"
             >
               <div className="grid grid-cols-2 gap-6">
-          <div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">Name:</label>
-              <input
-                type="text"
-                value={editFormData.name}
-                onChange={e => setEditFormData({ ...editFormData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">Email:</label>
-              <input
-                type="email"
-                value={editFormData.email || ''}
-                onChange={e => setEditFormData({ ...editFormData, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">Role:</label>
-              <select
-                value={editFormData.role}
-                onChange={e => setEditFormData({ ...editFormData, role: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
-              >
-                <option value="Admin">Admin</option>
-                <option value="Tech">Tech</option>
-                <option value="User">User</option>
-              </select>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">Status:</label>
-              <select
-                value={editFormData.status || 'Active'}
-                onChange={e => setEditFormData({ ...editFormData, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Suspended">Suspended</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">SN/MAC:</label>
-              <input
-                type="text"
-                value={editFormData.snmac}
-                onChange={e => setEditFormData({ ...editFormData, snmac: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">Location:</label>
-              <input
-                type="text"
-                value={editFormData.location}
-                onChange={e => setEditFormData({ ...editFormData, location: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">PON:</label>
-              <input
-                type="text"
-                value={editFormData.pon}
-                onChange={e => setEditFormData({ ...editFormData, pon: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-          </div>
-        </div>
-        {/* Permissions (mock checkboxes) */}
-        <div>
-          <h4 className="text-base font-medium text-gray-900 mb-2">Permissions:</h4>
-          <div className="grid grid-cols-3 gap-4">
-            {['User Management', 'Network Configuration', 'Reporting', 'Device Management', 'Diagnostics', 'Billing Management'].map((perm, idx) => (
-              <div className="flex items-center" key={perm}>
-                <input
-                  type="checkbox"
-                  checked={editFormData.permissions?.[perm] || false}
-                  onChange={e =>
-                    setEditFormData({
-                      ...editFormData,
-                      permissions: {
-                        ...editFormData.permissions,
-                        [perm]: e.target.checked,
-                      },
-                    })
-                  }
-                  id={`perm-${idx}`}
-                />
-                <label htmlFor={`perm-${idx}`} className="ml-2 block text-sm text-gray-700">{perm}</label>
+                <div>
+                  <div className="mb-4">
+                    <label className="block text-sm text-gray-500 mb-1">Name:</label>
+                    <input
+                      type="text"
+                      value={editFormData.name}
+                      onChange={e => setEditFormData({ ...editFormData, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm text-gray-500 mb-1">Email:</label>
+                    <input
+                      type="email"
+                      value={editFormData.email || ''}
+                      onChange={e => setEditFormData({ ...editFormData, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm text-gray-500 mb-1">Role ID:</label>
+                    <select
+                      value={editFormData.role_id}
+                      onChange={e => setEditFormData({ ...editFormData, role_id: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
+                    >
+                      <option value="Admin">Admin</option>
+                      <option value="Tech">Tech</option>
+                      <option value="User">User</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-        {/* Actions */}
-        <div className="flex justify-end gap-3 pt-4">
-          <Button
-            type="submit"
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            Save Changes
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setEditFormData({
-              name: '',
-              email: '',
-              role: 'User',
-              status: 'Active',
-              snmac: '',
-              location: '',
-              pon: '',
-              lastLogin: '',
-              permissions: {},
-            })}
-          >
-            Reset
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setShowAddModal(false)}
-          >
-            Cancel
-          </Button>
-        </div>
-              {/* ...same form fields as your edit modal, but using editFormData... */}
-              {/* ...actions: Save, Reset, Cancel... */}
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="submit"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  Save Changes
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditFormData({
+                    name: '',
+                    email: '',
+                    role_id: 'User',
+                  })}
+                >
+                  Reset
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAddModal(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
             </form>
           </div>
         </div>
       )}
 
       {/* Edit User Modal */}
-{showEditModal && selectedUser && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-    <div className="relative bg-white rounded-xl shadow-2xl p-8 w-full max-w-2xl pointer-events-auto">
-      {/* Close Button */}
-      <button
-        type="button"
-        className="absolute top-4 right-4 bg-white rounded-full text-gray-400 hover:text-gray-600 focus:outline-none"
-        onClick={handleCloseModal}
-        aria-label="Close"
-      >
-        <X className="h-6 w-6" />
-      </button>
-      <h3 className="text-2xl font-semibold text-gray-900 mb-6">Edit User</h3>
-      <form
-        onSubmit={handleSaveEditUser}
-        className="space-y-6"
-        autoComplete="off"
-      >
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">Name:</label>
-              <input
-                type="text"
-                value={editFormData.name}
-                onChange={e => setEditFormData({ ...editFormData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">Email:</label>
-              <input
-                type="email"
-                value={editFormData.email || ''}
-                onChange={e => setEditFormData({ ...editFormData, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">Role:</label>
-              <select
-                value={editFormData.role}
-                onChange={e => setEditFormData({ ...editFormData, role: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
-              >
-                <option value="Admin">Admin</option>
-                <option value="Tech">Tech</option>
-                <option value="User">User</option>
-              </select>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">Status:</label>
-              <select
-                value={editFormData.status || 'Active'}
-                onChange={e => setEditFormData({ ...editFormData, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Suspended">Suspended</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">SN/MAC:</label>
-              <input
-                type="text"
-                value={editFormData.snmac}
-                onChange={e => setEditFormData({ ...editFormData, snmac: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">Location:</label>
-              <input
-                type="text"
-                value={editFormData.location}
-                onChange={e => setEditFormData({ ...editFormData, location: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">PON:</label>
-              <input
-                type="text"
-                value={editFormData.pon}
-                onChange={e => setEditFormData({ ...editFormData, pon: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-500 mb-1">Last Login:</label>
-              <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
-                {editFormData.lastLogin || '—'}
+      {showEditModal && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="relative bg-white rounded-xl shadow-2xl p-8 w-full max-w-2xl pointer-events-auto">
+            {/* Close Button */}
+            <button
+              type="button"
+              className="absolute top-4 right-4 bg-white rounded-full text-gray-400 hover:text-gray-600 focus:outline-none"
+              onClick={handleCloseModal}
+              aria-label="Close"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            <h3 className="text-2xl font-semibold text-gray-900 mb-6">Edit User</h3>
+            <form
+              onSubmit={handleSaveEditUser}
+              className="space-y-6"
+              autoComplete="off"
+            >
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <div className="mb-4">
+                    <label className="block text-sm text-gray-500 mb-1">Name:</label>
+                    <input
+                      type="text"
+                      value={editFormData.name}
+                      onChange={e => setEditFormData({ ...editFormData, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm text-gray-500 mb-1">Email:</label>
+                    <input
+                      type="email"
+                      value={editFormData.email || ''}
+                      onChange={e => setEditFormData({ ...editFormData, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm text-gray-500 mb-1">Role ID:</label>
+                    <select
+                      value={editFormData.role_id}
+                      onChange={e => setEditFormData({ ...editFormData, role_id: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
+                    >
+                      <option value="Admin">Admin</option>
+                      <option value="Tech">Tech</option>
+                      <option value="User">User</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-        {/* Permissions (mock checkboxes) */}
-        <div>
-          <h4 className="text-base font-medium text-gray-900 mb-2">Permissions:</h4>
-          <div className="grid grid-cols-3 gap-4">
-            {['User Management', 'Network Configuration', 'Reporting', 'Device Management', 'Diagnostics', 'Billing Management'].map((perm, idx) => (
-              <div className="flex items-center" key={perm}>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                  checked={editFormData.permissions?.[perm] || false}
-                  onChange={e =>
-                    setEditFormData({
-                      ...editFormData,
-                      permissions: {
-                        ...editFormData.permissions,
-                        [perm]: e.target.checked,
-                      },
-                    })
-                  }
-                  id={`perm-${idx}`}
-                />
-                <label htmlFor={`perm-${idx}`} className="ml-2 block text-sm text-gray-700">{perm}</label>
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="submit"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  Save Changes
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditFormData({ ...selectedUser })}
+                >
+                  Reset
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCloseModal}
+                >
+                  Cancel
+                </Button>
               </div>
-            ))}
+            </form>
           </div>
         </div>
-        {/* Actions */}
-        <div className="flex justify-end gap-3 pt-4">
-          <Button
-            type="submit"
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            Save Changes
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setEditFormData({ ...selectedUser })}
-          >
-            Reset
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCloseModal}
-          >
-            Cancel
-          </Button>
-        </div>
-      </form>
-    </div>
-  </div>
-)}
+      )}
     </div>
   );
-};
+}
 
 export default AdminPanel;
