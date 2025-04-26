@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   ZoomIn,
@@ -29,9 +29,88 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import LogoutButton from '@/components/logoutButton';
+import dynamic from 'next/dynamic';
+
+
+// We need to use dynamic import for Leaflet components since they use browser APIs
+const MapComponent = dynamic(() => import('./MapComponent'), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-gray-100 flex items-center justify-center">Loading map...</div>
+});
+
 const NetworkMaps = () => {
-  const [activeView, setActiveView] = useState('logical');
+  const [activeView, setActiveView] = useState('geographical');
+  const [devices, setDevices] = useState([]);
+  const [connections, setConnections] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [zoomLevel, setZoomLevel] = useState(0); // For zoom controls
+
+  useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        setLoading(true);
+        console.log('Fetching device data from API...');
+        
+        // Only fetch data when geographical view is active
+        if (activeView === 'geographical') {
+          const response = await fetch('/api/network-devices');
+          const responseData = await response.json();
+          
+          if (!response.ok) {
+            console.error('API error response:', responseData);
+            throw new Error(responseData.error || responseData.details || 'Failed to fetch network devices');
+          }
+          
+          console.log('Device data received:', responseData);
+          
+          setDevices(responseData.devices || []);
+          setConnections(responseData.connections || []);
+        }
+      } catch (err) {
+        console.error('Error fetching devices:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDevices();
+  }, [activeView]);
+
+  // Filter devices by type when available
+  const oltDevices = devices.filter(device => device.type === 'OLT');
+  const onuDevices = devices.filter(device => device.type === 'ONU');
+
+  // Helper for refreshing the map data
+  const handleRefresh = () => {
+    if (activeView === 'geographical') {
+      setLoading(true);
+      fetch('/api/network-devices')
+        .then(response => response.json())
+        .then(data => {
+          setDevices(data.devices || []);
+          setConnections(data.connections || []);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('Error refreshing data:', err);
+          setError('Failed to refresh network data');
+          setLoading(false);
+        });
+    }
+  };
+
+  // Helper for zoom controls
+  const handleZoomIn = () => {
+    setZoomLevel(prev => prev + 1);
+    // This would need to be passed to the map component
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(0, prev - 1));
+    // This would need to be passed to the map component
+  };
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -179,7 +258,10 @@ const NetworkMaps = () => {
               <div className="text-xs text-gray-300">Administrator</div>
             </div>
           </div>
-          <LogoutButton />
+          <Button variant="ghost" className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg">
+            <LogOut className="mr-2 h-5 w-5" />
+            Log Out
+          </Button>
         </div>
       </div>
       
@@ -201,10 +283,8 @@ const NetworkMaps = () => {
                 <Bell className="h-5 w-5 text-black" />
                 <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
               </Button>
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/settings">
+              <Button variant="ghost" size="icon">
                 <Settings className="h-5 w-5 text-black" />
-                </Link>
               </Button>
               <Button variant="ghost" size="icon">
                 <HelpCircle className="h-5 w-5 text-black" />
@@ -244,13 +324,13 @@ const NetworkMaps = () => {
               </Button>
               
               <div className="ml-auto flex gap-2">
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" onClick={handleZoomOut}>
                   <Minus className="h-4 w-4 text-black" />
                 </Button>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" onClick={handleZoomIn}>
                   <Plus className="h-4 w-4 text-black" />
                 </Button>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" onClick={handleRefresh}>
                   <RotateCw className="h-4 w-4 text-black" />
                 </Button>
                 <Button variant="outline" className="px-4 text-black">
@@ -262,7 +342,7 @@ const NetworkMaps = () => {
               </div>
             </div>
             
-            <div className="border rounded-md p-4 min-h-[500px] relative">
+            <div className="border rounded-md min-h-[500px] relative">
               {activeView === 'logical' && (
                 /* Logical Network Diagram */
                 <svg width="100%" height="100%" className="absolute inset-0">
@@ -399,82 +479,54 @@ const NetworkMaps = () => {
               )}
 
               {activeView === 'geographical' && (
-                /* Geographical View Map */
-                <div className="absolute inset-0">
-                  <svg width="100%" height="100%" className="absolute inset-0">
-                    {/* Simple map outline */}
-                    <path d="M 200 150 L 250 150 L 270 180 L 350 160 L 400 180 L 450 170 L 500 190 L 550 180 L 600 200 L 650 220 L 700 210 L 750 230 L 800 240 L 900 220 L 950 230 L 980 200 L 1000 220 L 1000 400 L 950 420 L 900 400 L 850 420 L 800 380 L 750 400 L 700 380 L 650 420 L 600 400 L 550 380 L 500 400 L 450 380 L 400 350 L 350 370 L 300 350 L 250 380 L 220 350 L 200 370 Z" 
-                          fill="#EBF8FF" stroke="#A0AEC0" strokeWidth="2" />
-                    
-                    {/* Major roads */}
-                    <path d="M 300 150 L 300 450" stroke="#CBD5E0" strokeWidth="3" fill="none" />
-                    <path d="M 200 300 L 1000 300" stroke="#CBD5E0" strokeWidth="3" fill="none" />
-                    <path d="M 600 150 L 600 450" stroke="#CBD5E0" strokeWidth="3" fill="none" />
-                    <path d="M 450 200 L 750 400" stroke="#CBD5E0" strokeWidth="2" fill="none" />
-                    <path d="M 750 200 L 450 400" stroke="#CBD5E0" strokeWidth="2" fill="none" />
-                    
-                    {/* Data Centers */}
-                    <circle cx="400" cy="200" r="25" fill="#E6F0FF" stroke="#3B82F6" strokeWidth="2" />
-                    <text x="400" y="200" textAnchor="middle" dominantBaseline="middle" fill="#000" fontWeight="bold">DC1</text>
-                    
-                    <circle cx="800" cy="250" r="25" fill="#E6F0FF" stroke="#3B82F6" strokeWidth="2" />
-                    <text x="800" y="250" textAnchor="middle" dominantBaseline="middle" fill="#000" fontWeight="bold">DC2</text>
-                    
-                    {/* OLTs */}
-                    <circle cx="350" cy="270" r="15" fill="#E6FFEF" stroke="#22C55E" strokeWidth="2" />
-                    <text x="350" y="270" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="10">E01</text>
-                    
-                    <circle cx="450" cy="250" r="15" fill="#E6FFEF" stroke="#22C55E" strokeWidth="2" />
-                    <text x="450" y="250" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="10">E02</text>
-                    
-                    <circle cx="500" cy="320" r="15" fill="#FFEBEB" stroke="#EF4444" strokeWidth="2" />
-                    <text x="500" y="320" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="10">N03</text>
-                    
-                    <circle cx="700" cy="300" r="15" fill="#E6FFEF" stroke="#22C55E" strokeWidth="2" />
-                    <text x="700" y="300" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="10">W05</text>
-                    
-                    {/* ONTs as small dots */}
-                    <circle cx="280" cy="320" r="6" fill="#F9F0FF" stroke="#A855F7" strokeWidth="1" />
-                    <circle cx="320" cy="350" r="6" fill="#F9F0FF" stroke="#A855F7" strokeWidth="1" />
-                    <circle cx="400" cy="280" r="6" fill="#F9F0FF" stroke="#A855F7" strokeWidth="1" />
-                    <circle cx="420" cy="320" r="6" fill="#F9F0FF" stroke="#A855F7" strokeWidth="1" />
-                    <circle cx="550" cy="350" r="6" fill="#F9F0FF" stroke="#A855F7" strokeWidth="1" />
-                    <circle cx="650" cy="280" r="6" fill="#F9F0FF" stroke="#A855F7" strokeWidth="1" />
-                    <circle cx="750" cy="320" r="6" fill="#F9F0FF" stroke="#A855F7" strokeWidth="1" />
-                    
-                    {/* Connections */}
-                    <path d="M 400 200 L 350 270" stroke="#9AA5B1" strokeWidth="1.5" fill="none" />
-                    <path d="M 400 200 L 450 250" stroke="#9AA5B1" strokeWidth="1.5" fill="none" />
-                    <path d="M 400 200 L 500 320" stroke="#9AA5B1" strokeWidth="1.5" fill="none" strokeDasharray="4,2" />
-                    <path d="M 800 250 L 700 300" stroke="#9AA5B1" strokeWidth="1.5" fill="none" />
-                    
-                    <path d="M 350 270 L 280 320" stroke="#9AA5B1" strokeWidth="1" fill="none" />
-                    <path d="M 350 270 L 320 350" stroke="#9AA5B1" strokeWidth="1" fill="none" />
-                    <path d="M 450 250 L 400 280" stroke="#9AA5B1" strokeWidth="1" fill="none" />
-                    <path d="M 450 250 L 420 320" stroke="#9AA5B1" strokeWidth="1" fill="none" />
-                    <path d="M 500 320 L 550 350" stroke="#9AA5B1" strokeWidth="1" fill="none" strokeDasharray="3,2" />
-                    <path d="M 700 300 L 650 280" stroke="#9AA5B1" strokeWidth="1" fill="none" strokeDasharray="3,2" />
-                    <path d="M 700 300 L 750 320" stroke="#9AA5B1" strokeWidth="1" fill="none" strokeDasharray="3,2" />
-                    
-                    {/* City names */}
-                    <text x="300" y="180" textAnchor="middle" fill="#4A5568" fontSize="12">Eastville</text>
-                    <text x="500" y="230" textAnchor="middle" fill="#4A5568" fontSize="12">Northbrook</text>
-                    <text x="700" y="350" textAnchor="middle" fill="#4A5568" fontSize="12">Westridge</text>
-                    <text x="550" y="400" textAnchor="middle" fill="#4A5568" fontSize="12">Southfield</text>
-                    
-                    {/* Legend */}
-                    <rect x="800" y="380" width="180" height="100" rx="5" ry="5" fill="white" stroke="#D1D5DB" strokeWidth="1" />
-                    <text x="890" y="400" textAnchor="middle" fill="#000" fontWeight="bold">Legend</text>
-                    
-                    <circle cx="820" cy="420" r="6" fill="#E6F0FF" stroke="#3B82F6" strokeWidth="2" />
-                    <text x="880" y="420" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="12">Data Centers</text>
-                    
-                    <circle cx="820" cy="440" r="6" fill="#E6FFEF" stroke="#22C55E" strokeWidth="2" />
-                    <text x="880" y="440" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="12">Active OLTs</text>
-                    
-                    <circle cx="820" cy="460" r="6" fill="#FFEBEB" stroke="#EF4444" strokeWidth="2" />
-                    <text x="880" y="460" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="12">Critical OLTs</text>
-                  </svg>
+                /* OpenStreetMap Geographical View */
+                <div className="h-[500px] relative">
+                  {loading ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+                      <div className="flex flex-col items-center">
+                        <RotateCw className="h-8 w-8 text-green-500 animate-spin mb-2" />
+                        <span className="text-black">Loading network map...</span>
+                      </div>
+                    </div>
+                  ) : error ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-red-50">
+                      <div className="max-w-md p-4 text-center">
+                        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                        <h3 className="text-lg font-bold text-red-700 mb-2">Error Loading Map</h3>
+                        <p className="text-red-600 mb-4">{error}</p>
+                        <Button 
+                          onClick={handleRefresh} 
+                          className="bg-green-500 hover:bg-green-600"
+                        >
+                          <RotateCw className="h-4 w-4 mr-2" />
+                          Retry
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <MapComponent devices={devices} connections={connections} />
+                  )}
+                  
+                  {/* Map Overlay - Legend */}
+                  {!loading && !error && devices.length > 0 && (
+                    <div className="absolute top-4 right-4 bg-white p-3 rounded shadow-md z-10">
+                      <h4 className="font-bold text-sm mb-2">Network Elements</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                          <span className="text-xs">OLT ({oltDevices.length})</span>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                          <span className="text-xs">ONU ({onuDevices.length})</span>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="w-5 h-0.5 bg-gray-400 border-dashed mr-2"></div>
+                          <span className="text-xs">Connections ({connections.length})</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -488,10 +540,10 @@ const NetworkMaps = () => {
                   <div className="flex items-center">
                     <div className="h-4 w-4 rounded-full bg-red-500 mr-2"></div>
                     <span className="text-black">OLT-North-03 connection failure</span>
-                  </div>
+                    </div>
                   <div className="flex items-center ml-4">
                     <div className="h-4 w-4 rounded-full bg-yellow-500 mr-2"></div>
-                    <span className="text-black">2 ONTs offline</span>
+                    <span className="text-black">2 ONUs offline</span>
                   </div>
                 </div>
               </div>
