@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
+import {
+  Search,
   ZoomIn,
   ZoomOut,
   RotateCw,
@@ -18,7 +18,7 @@ import {
   Minus,
   Activity,
   LineChart,
-  CheckCircle, 
+  CheckCircle,
   AlertCircle,
   Plus,
   Settings2,
@@ -51,22 +51,16 @@ const NetworkMaps = () => {
       try {
         setLoading(true);
         console.log('Fetching device data from API...');
-        
-        // Only fetch data when geographical view is active
-        if (activeView === 'geographical') {
-          const response = await fetch('/api/network-devices');
-          const responseData = await response.json();
-          
-          if (!response.ok) {
-            console.error('API error response:', responseData);
-            throw new Error(responseData.error || responseData.details || 'Failed to fetch network devices');
-          }
-          
-          console.log('Device data received:', responseData);
-          
-          setDevices(responseData.devices || []);
-          setConnections(responseData.connections || []);
+        // Always fetch data for all views
+        const response = await fetch('/api/network-devices');
+        const responseData = await response.json();
+        if (!response.ok) {
+          console.error('API error response:', responseData);
+          throw new Error(responseData.error || responseData.details || 'Failed to fetch network devices');
         }
+        console.log('Device data received:', responseData);
+        setDevices(responseData.devices || []);
+        setConnections(responseData.connections || []);
       } catch (err) {
         console.error('Error fetching devices:', err);
         setError(err.message);
@@ -74,9 +68,8 @@ const NetworkMaps = () => {
         setLoading(false);
       }
     };
-    
     fetchDevices();
-  }, [activeView]);
+  }, []);
 
   // Filter devices by type when available
   const oltDevices = devices.filter(device => device.type === 'OLT');
@@ -84,21 +77,24 @@ const NetworkMaps = () => {
 
   // Helper for refreshing the map data
   const handleRefresh = () => {
-    if (activeView === 'geographical') {
-      setLoading(true);
-      fetch('/api/network-devices')
-        .then(response => response.json())
-        .then(data => {
-          setDevices(data.devices || []);
-          setConnections(data.connections || []);
-          setLoading(false);
-        })
-        .catch(err => {
-          console.error('Error refreshing data:', err);
-          setError('Failed to refresh network data');
-          setLoading(false);
-        });
-    }
+    setLoading(true);
+    setError(null);
+    fetch('/api/network-devices')
+      .then(async response => {
+        const responseData = await response.json();
+        if (!response.ok) {
+          console.error('API error response:', responseData);
+          throw new Error(responseData.error || responseData.details || 'Failed to fetch network devices');
+        }
+        setDevices(responseData.devices || []);
+        setConnections(responseData.connections || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error refreshing data:', err);
+        setError(err.message || 'Failed to refresh network data');
+        setLoading(false);
+      });
   };
 
   // Helper for zoom controls
@@ -122,11 +118,11 @@ const NetworkMaps = () => {
           </div>
           <span className="font-bold text-xl">DOTMAC</span>
         </div>
-        
+
         <nav className="flex-1 overflow-y-auto">
           <div className="p-2">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -135,9 +131,9 @@ const NetworkMaps = () => {
                 Dashboard
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -146,9 +142,9 @@ const NetworkMaps = () => {
                 Customers
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -157,9 +153,9 @@ const NetworkMaps = () => {
                 OLT Management
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -168,9 +164,9 @@ const NetworkMaps = () => {
                 ONT Management
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start bg-green-700 text-white hover:bg-green-600 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -179,9 +175,9 @@ const NetworkMaps = () => {
                 Network Maps
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -190,9 +186,9 @@ const NetworkMaps = () => {
                 Graphs
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -201,9 +197,9 @@ const NetworkMaps = () => {
                 Configured
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -212,9 +208,9 @@ const NetworkMaps = () => {
                 Unconfigured
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -223,9 +219,9 @@ const NetworkMaps = () => {
                 Diagnostics
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -234,9 +230,9 @@ const NetworkMaps = () => {
                 Reports
               </Link>
             </Button>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start text-white hover:bg-green-700 hover:text-white px-4 py-2 rounded-lg mb-1"
               asChild
             >
@@ -247,7 +243,7 @@ const NetworkMaps = () => {
             </Button>
           </div>
         </nav>
-        
+
         <div className="p-4 border-t border-green-700">
           <div className="flex items-center space-x-3 mb-3">
             <Avatar className="h-10 w-10 bg-blue-400">
@@ -264,7 +260,7 @@ const NetworkMaps = () => {
           </Button>
         </div>
       </div>
-      
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Navigation */}
@@ -292,37 +288,31 @@ const NetworkMaps = () => {
             </div>
           </div>
         </header>
-        
+
         {/* Main Network Maps Content */}
         <main className="flex-1 overflow-y-auto p-6 bg-gray-100">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-black">Network Maps</h1>
             <p className="text-black">View and monitor your network topology</p>
           </div>
-          
+
           <div className="bg-white rounded-md shadow-sm p-4 mb-6">
             <div className="flex flex-wrap gap-3 mb-4">
-              <Button 
+              <Button
                 className={`${activeView === 'logical' ? 'bg-green-500 hover:bg-green-600' : 'bg-white text-black border'}`}
                 onClick={() => setActiveView('logical')}
               >
                 Logical View
               </Button>
-              <Button 
-                variant={activeView === 'physical' ? 'default' : 'outline'} 
-                className={activeView === 'physical' ? 'bg-green-500 hover:bg-green-600' : 'bg-white text-black'}
-                onClick={() => setActiveView('physical')}
-              >
-                Physical View
-              </Button>
-              <Button 
-                variant={activeView === 'geographical' ? 'default' : 'outline'} 
+
+              <Button
+                variant={activeView === 'geographical' ? 'default' : 'outline'}
                 className={activeView === 'geographical' ? 'bg-green-500 hover:bg-green-600 ' : 'bg-white text-black'}
                 onClick={() => setActiveView('geographical')}
               >
                 Geographical View
               </Button>
-              
+
               <div className="ml-auto flex gap-2">
                 <Button variant="outline" size="icon" onClick={handleZoomOut}>
                   <Minus className="h-4 w-4 text-black" />
@@ -333,86 +323,137 @@ const NetworkMaps = () => {
                 <Button variant="outline" size="icon" onClick={handleRefresh}>
                   <RotateCw className="h-4 w-4 text-black" />
                 </Button>
-                <Button variant="outline" className="px-4 text-black">
-                  Legend
-                </Button>
-                <Button variant="outline" className="px-4 text-black">
-                  Export
-                </Button>
               </div>
             </div>
-            
+
             <div className="border rounded-md min-h-[500px] relative">
               {activeView === 'logical' && (
-                /* Logical Network Diagram */
+                /* Logical Network Diagram with real data */
                 <svg width="100%" height="100%" className="absolute inset-0">
-                  {/* Data centers connection */}
-                  <path d="M 671 313 Q 740 250 810 313" stroke="#9AA5B1" strokeWidth="2" fill="none" />
-                  
-                  {/* Data Center 1 to OLTs */}
-                  <path d="M 671 350 L 500 425" stroke="#9AA5B1" strokeWidth="2" fill="none" />
-                  <path d="M 671 350 L 580 425" stroke="#9AA5B1" strokeWidth="2" fill="none" />
-                  <path d="M 671 350 L 740 425" stroke="#9AA5B1" strokeWidth="2" fill="none" />
-                  
-                  {/* Data Center 2 to OLT */}
-                  <path d="M 810 350 L 895 425" stroke="#9AA5B1" strokeWidth="2" fill="none" />
-                  
-                  {/* OLT-East-01 to ONTs */}
-                  <path d="M 480 460 L 380 545" stroke="#9AA5B1" strokeWidth="2" fill="none" />
-                  <path d="M 500 460 L 480 545" stroke="#9AA5B1" strokeWidth="2" fill="none" />
-                  
-                  {/* OLT-East-02 to ONTs */}
-                  <path d="M 580 460 L 580 545" stroke="#9AA5B1" strokeWidth="2" fill="none" />
-                  <path d="M 600 460 L 680 545" stroke="#9AA5B1" strokeWidth="2" fill="none" />
-                  
-                  {/* OLT-North-03 to ONT (dashed) */}
-                  <path d="M 740 460 L 780 545" stroke="#9AA5B1" strokeWidth="2" fill="none" strokeDasharray="5,5" />
-                  
-                  {/* OLT-West-05 to ONTs (dashed) */}
-                  <path d="M 895 460 L 880 545" stroke="#9AA5B1" strokeWidth="2" fill="none" strokeDasharray="5,5" />
-                  <path d="M 915 460 L 980 545" stroke="#9AA5B1" strokeWidth="2" fill="none" strokeDasharray="5,5" />
-                  
-                  {/* Data Centers */}
-                  <rect x="622" y="287" width="100" height="60" rx="5" ry="5" fill="#E6F0FF" stroke="#3B82F6" strokeWidth="2" />
-                  <text x="672" y="323" textAnchor="middle" dominantBaseline="middle" fill="#000">Data Center 1</text>
-                  
-                  <rect x="760" y="287" width="100" height="60" rx="5" ry="5" fill="#E6F0FF" stroke="#3B82F6" strokeWidth="2" />
-                  <text x="810" y="323" textAnchor="middle" dominantBaseline="middle" fill="#000">Data Center 2</text>
-                  
-                  {/* OLTs */}
-                  <rect x="450" y="410" width="100" height="50" rx="5" ry="5" fill="#E6FFEF" stroke="#22C55E" strokeWidth="2" />
-                  <text x="500" y="435" textAnchor="middle" dominantBaseline="middle" fill="#000">OLT-East-01</text>
-                  
-                  <rect x="550" y="410" width="100" height="50" rx="5" ry="5" fill="#E6FFEF" stroke="#22C55E" strokeWidth="2" />
-                  <text x="600" y="435" textAnchor="middle" dominantBaseline="middle" fill="#000">OLT-East-02</text>
-                  
-                  <rect x="690" y="410" width="100" height="50" rx="5" ry="5" fill="#FFEBEB" stroke="#EF4444" strokeWidth="2" />
-                  <text x="740" y="435" textAnchor="middle" dominantBaseline="middle" fill="#000">OLT-North-03</text>
-                  
-                  <rect x="845" y="410" width="100" height="50" rx="5" ry="5" fill="#E6FFEF" stroke="#22C55E" strokeWidth="2" />
-                  <text x="895" y="435" textAnchor="middle" dominantBaseline="middle" fill="#000">OLT-West-05</text>
-                  
-                  {/* ONTs */}
-                  <rect x="335" y="530" width="90" height="30" rx="5" ry="5" fill="#F9F0FF" stroke="#A855F7" strokeWidth="2" />
-                  <text x="380" y="545" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="12">ONT-2201-ABC</text>
-                  
-                  <rect x="435" y="530" width="90" height="30" rx="5" ry="5" fill="#F9F0FF" stroke="#A855F7" strokeWidth="2" />
-                  <text x="480" y="545" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="12">ONT-2202-DEF</text>
-                  
-                  <rect x="535" y="530" width="90" height="30" rx="5" ry="5" fill="#F9F0FF" stroke="#A855F7" strokeWidth="2" />
-                  <text x="580" y="545" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="12">ONT-2203-GHI</text>
-                  
-                  <rect x="635" y="530" width="90" height="30" rx="5" ry="5" fill="#F9F0FF" stroke="#A855F7" strokeWidth="2" />
-                  <text x="680" y="545" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="12">ONT-2204-JKL</text>
-                  
-                  <rect x="735" y="530" width="90" height="30" rx="5" ry="5" fill="#F9F0FF" stroke="#A855F7" strokeWidth="2" />
-                  <text x="780" y="545" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="12">ONT-2205-MNO</text>
-                  
-                  <rect x="835" y="530" width="90" height="30" rx="5" ry="5" fill="#F9F0FF" stroke="#A855F7" strokeWidth="2" />
-                  <text x="880" y="545" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="12">ONT-2206-PQR</text>
-                  
-                  <rect x="935" y="530" width="90" height="30" rx="5" ry="5" fill="#F9F0FF" stroke="#A855F7" strokeWidth="2" />
-                  <text x="980" y="545" textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize="12">ONT-2207-STU</text>
+                  {/* Draw connections first so they appear behind the nodes */}
+                  {connections.map(connection => {
+                    // Calculate positions for each connection
+                    const sourceDevice = devices.find(d => d.id === connection.source.id);
+                    const targetDevice = devices.find(d => d.id === connection.target.id);
+
+                    // Skip if devices aren't found or positions aren't calculated
+                    if (!sourceDevice || !targetDevice ||
+                      !sourceDevice._logicalPos || !targetDevice._logicalPos) return null;
+
+                    const sourcePos = sourceDevice._logicalPos;
+                    const targetPos = targetDevice._logicalPos;
+
+                    return (
+                      <path
+                        key={connection.id}
+                        d={`M ${sourcePos.x} ${sourcePos.y} L ${targetPos.x} ${targetPos.y}`}
+                        stroke="#9AA5B1"
+                        strokeWidth="2"
+                        fill="none"
+                        strokeDasharray={targetDevice.status === 'PENDING' ? "5,5" : "none"}
+                      />
+                    );
+                  })}
+
+                  {/* Draw OLT nodes */}
+                  {oltDevices.map((olt, index) => {
+                    // Calculate position for each OLT - position them in a row at the top
+                    const totalWidth = 900;
+                    const padding = 150;
+                    const spacing = (totalWidth - (2 * padding)) / Math.max(1, oltDevices.length - 1);
+                    const x = padding + (index * spacing);
+                    const y = 200;
+
+                    // Store position for connections
+                    olt._logicalPos = { x, y };
+
+                    // Determine fill color based on status
+                    const fillColor = olt.status === 'PENDING' ? "#FFEBEB" : "#E6FFEF";
+                    const strokeColor = olt.status === 'PENDING' ? "#EF4444" : "#22C55E";
+
+                    return (
+                      <g key={olt.id}>
+                        <rect
+                          x={x - 60}
+                          y={y - 25}
+                          width={120}
+                          height={50}
+                          rx={5}
+                          ry={5}
+                          fill={fillColor}
+                          stroke={strokeColor}
+                          strokeWidth={2}
+                        />
+                        <text
+                          x={x}
+                          y={y + 5}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill="#000"
+                          fontSize={12}
+                        >
+                          {olt.name}
+                        </text>
+                      </g>
+                    );
+                  })}
+
+                  {/* Draw ONU nodes */}
+                  {onuDevices.map((onu, index) => {
+                    // Find parent OLT for positioning
+                    const parentOlt = oltDevices.find(olt => olt.id === onu.parent_id);
+
+                    if (!parentOlt || !parentOlt._logicalPos) return null;
+
+                    // Calculate position for each ONU - arrange in a grid below their parent OLT
+                    const parentPos = parentOlt._logicalPos;
+
+                    // Count how many ONUs are connected to this OLT
+                    const siblings = onuDevices.filter(o => o.parent_id === parentOlt.id);
+                    const siblingIndex = siblings.findIndex(o => o.id === onu.id);
+
+                    // Calculate grid position (3 ONUs per row max)
+                    const rowIndex = Math.floor(siblingIndex / 3);
+                    const colIndex = siblingIndex % 3;
+
+                    const x = parentPos.x - 80 + (colIndex * 80);
+                    const y = parentPos.y + 100 + (rowIndex * 60);
+
+                    // Store position for connections
+                    onu._logicalPos = { x, y };
+
+                    // Determine fill color based on status
+                    const fillColor = onu.status === 'PENDING' ? "#FFF9DB" : "#F9F0FF";
+                    const strokeColor = onu.status === 'PENDING' ? "#F59E0B" : "#A855F7";
+
+                    return (
+                      <g key={onu.id}>
+                        <rect
+                          x={x - 40}
+                          y={y - 15}
+                          width={80}
+                          height={30}
+                          rx={5}
+                          ry={5}
+                          fill={fillColor}
+                          stroke={strokeColor}
+                          strokeWidth={2}
+                        />
+                        <text
+                          x={x}
+                          y={y + 2}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill="#000"
+                          fontSize={10}
+                        >
+                          {onu.name}
+                        </text>
+                      </g>
+                    );
+                  })}
+
+
                 </svg>
               )}
 
@@ -422,59 +463,47 @@ const NetworkMaps = () => {
                   {/* Rack representations */}
                   <rect x="300" y="150" width="200" height="350" rx="2" ry="2" fill="#F5F5F5" stroke="#D1D5DB" strokeWidth="2" />
                   <text x="400" y="130" textAnchor="middle" fill="#000" fontWeight="bold">Data Center 1 - Rack B12</text>
-                  
+
                   <rect x="700" y="150" width="200" height="350" rx="2" ry="2" fill="#F5F5F5" stroke="#D1D5DB" strokeWidth="2" />
                   <text x="800" y="130" textAnchor="middle" fill="#000" fontWeight="bold">Data Center 2 - Rack A08</text>
 
                   {/* Equipment in Rack 1 */}
                   <rect x="310" y="180" width="180" height="40" rx="2" ry="2" fill="#E6F0FF" stroke="#3B82F6" strokeWidth="2" />
                   <text x="400" y="200" textAnchor="middle" dominantBaseline="middle" fill="#000">Core Switch DCR-01</text>
-                  
+
                   <rect x="310" y="230" width="180" height="40" rx="2" ry="2" fill="#E6F0FF" stroke="#3B82F6" strokeWidth="2" />
                   <text x="400" y="250" textAnchor="middle" dominantBaseline="middle" fill="#000">Router R-01</text>
-                  
+
                   <rect x="310" y="280" width="180" height="40" rx="2" ry="2" fill="#E6FFEF" stroke="#22C55E" strokeWidth="2" />
                   <text x="400" y="300" textAnchor="middle" dominantBaseline="middle" fill="#000">OLT-East-01 (Unit 5-6)</text>
-                  
+
                   <rect x="310" y="330" width="180" height="40" rx="2" ry="2" fill="#E6FFEF" stroke="#22C55E" strokeWidth="2" />
                   <text x="400" y="350" textAnchor="middle" dominantBaseline="middle" fill="#000">OLT-East-02 (Unit 7-8)</text>
-                  
+
                   <rect x="310" y="380" width="180" height="40" rx="2" ry="2" fill="#FFEBEB" stroke="#EF4444" strokeWidth="2" />
                   <text x="400" y="400" textAnchor="middle" dominantBaseline="middle" fill="#000">OLT-North-03 (Unit 9-10)</text>
-                  
+
                   <rect x="310" y="430" width="180" height="40" rx="2" ry="2" fill="#FFF9DB" stroke="#F59E0B" strokeWidth="2" />
                   <text x="400" y="450" textAnchor="middle" dominantBaseline="middle" fill="#000">Fiber Patch Panel</text>
-                  
+
                   {/* Equipment in Rack 2 */}
                   <rect x="710" y="180" width="180" height="40" rx="2" ry="2" fill="#E6F0FF" stroke="#3B82F6" strokeWidth="2" />
                   <text x="800" y="200" textAnchor="middle" dominantBaseline="middle" fill="#000">Core Switch DCR-02</text>
-                  
+
                   <rect x="710" y="230" width="180" height="40" rx="2" ry="2" fill="#E6F0FF" stroke="#3B82F6" strokeWidth="2" />
                   <text x="800" y="250" textAnchor="middle" dominantBaseline="middle" fill="#000">Router R-02</text>
-                  
+
                   <rect x="710" y="280" width="180" height="40" rx="2" ry="2" fill="#E6FFEF" stroke="#22C55E" strokeWidth="2" />
                   <text x="800" y="300" textAnchor="middle" dominantBaseline="middle" fill="#000">OLT-West-05 (Unit 3-4)</text>
-                  
+
                   <rect x="710" y="330" width="180" height="40" rx="2" ry="2" fill="#FFF9DB" stroke="#F59E0B" strokeWidth="2" />
                   <text x="800" y="350" textAnchor="middle" dominantBaseline="middle" fill="#000">Fiber Patch Panel</text>
-                  
+
                   {/* Rack connections */}
                   <path d="M 500 200 L 700 200" stroke="#9AA5B1" strokeWidth="2" fill="none" />
                   <path d="M 500 250 L 700 250" stroke="#9AA5B1" strokeWidth="2" fill="none" />
-                  
-                  {/* Legend */}
-                  <rect x="400" y="520" width="400" height="30" rx="5" ry="5" fill="white" stroke="#D1D5DB" strokeWidth="1" />
-                  <rect x="410" y="525" width="20" height="20" rx="2" ry="2" fill="#E6FFEF" stroke="#22C55E" strokeWidth="2" />
-                  <text x="445" y="535" dominantBaseline="middle" fill="#000">Active</text>
-                  
-                  <rect x="490" y="525" width="20" height="20" rx="2" ry="2" fill="#FFEBEB" stroke="#EF4444" strokeWidth="2" />
-                  <text x="525" y="535" dominantBaseline="middle" fill="#000">Critical</text>
-                  
-                  <rect x="570" y="525" width="20" height="20" rx="2" ry="2" fill="#FFF9DB" stroke="#F59E0B" strokeWidth="2" />
-                  <text x="605" y="535" dominantBaseline="middle" fill="#000">Warning</text>
-                  
-                  <rect x="650" y="525" width="20" height="20" rx="2" ry="2" fill="#E6F0FF" stroke="#3B82F6" strokeWidth="2" />
-                  <text x="685" y="535" dominantBaseline="middle" fill="#000">Network</text>
+
+
                 </svg>
               )}
 
@@ -494,8 +523,8 @@ const NetworkMaps = () => {
                         <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
                         <h3 className="text-lg font-bold text-red-700 mb-2">Error Loading Map</h3>
                         <p className="text-red-600 mb-4">{error}</p>
-                        <Button 
-                          onClick={handleRefresh} 
+                        <Button
+                          onClick={handleRefresh}
                           className="bg-green-500 hover:bg-green-600"
                         >
                           <RotateCw className="h-4 w-4 mr-2" />
@@ -506,7 +535,7 @@ const NetworkMaps = () => {
                   ) : (
                     <MapComponent devices={devices} connections={connections} />
                   )}
-                  
+
                   {/* Map Overlay - Legend */}
                   {!loading && !error && devices.length > 0 && (
                     <div className="absolute top-4 right-4 bg-white p-3 rounded shadow-md z-10">
@@ -531,7 +560,7 @@ const NetworkMaps = () => {
               )}
             </div>
           </div>
-          
+
           <div className="bg-white rounded-md shadow-sm p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -540,7 +569,7 @@ const NetworkMaps = () => {
                   <div className="flex items-center">
                     <div className="h-4 w-4 rounded-full bg-red-500 mr-2"></div>
                     <span className="text-black">OLT-North-03 connection failure</span>
-                    </div>
+                  </div>
                   <div className="flex items-center ml-4">
                     <div className="h-4 w-4 rounded-full bg-yellow-500 mr-2"></div>
                     <span className="text-black">2 ONUs offline</span>
@@ -552,7 +581,7 @@ const NetworkMaps = () => {
               </Button>
             </div>
           </div>
-          
+
           <div className="text-center text-sm text-black mt-4">
             © 2025 DOTMAC Network Management System v1.2.1
           </div>

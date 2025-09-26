@@ -32,36 +32,12 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import LogoutButton from '@/components/logoutButton';
-// Mock data for configured devices
+import { useEffect } from 'react';
+import { getOlts } from '../scripts/supabase-olt';
+
+// Mock data for configured devices (for development/testing)
 const configuredDevices = [
   {
-    name: "Smith-Residence",
-    sn_mac: "00:1A:2B:3C:4D:5E",
-    onu: "East Zone",
-    zone: "East Zone",
-    odb: "ODB-122",
-    signal: "-15.2 dBm",
-    br: "50/25",
-    vlan: "510",
-    voip: true,
-    tv: true,
-    type: "GPON",
-    authDate: "2024-12-15",
-    status: "active"
-  },
-  {
-    name: "Johnson-Home",
-    sn_mac: "00:2C:3D:4E:5F:6G",
-    onu: "East Zone",
-    zone: "East Zone",
-    odb: "ODB-124",
-    signal: "-16.8 dBm",
-    br: "100/50",
-    vlan: "510",
-    voip: true,
-    tv: false,
-    type: "GPON",
-    authDate: "2024-12-18",
     status: "active"
   },
   {
@@ -168,21 +144,6 @@ const configuredDevices = [
     type: "GPON",
     authDate: "2025-02-15",
     status: "active"
-  },
-  {
-    name: "Lewis-Shop",
-    sn_mac: "00:0K:1L:2M:3N:4O",
-    onu: "North Zone",
-    zone: "North Zone",
-    odb: "ODB-342",
-    signal: "-22.5 dBm",
-    br: "100/50",
-    vlan: "530",
-    voip: true,
-    tv: false,
-    type: "GPON",
-    authDate: "2025-03-01",
-    status: "warning"
   }
 ];
 
@@ -191,9 +152,33 @@ const ConfiguredDevices = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedStatus, setSelectedStatus] = useState('All Statuses');
   const [selectedZone, setSelectedZone] = useState('All Zones');
-  const totalItems = 128;
+  const [devices, setDevices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const itemsPerPage = 10;
+  const totalItems = devices.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  useEffect(() => {
+    async function fetchOlts() {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getOlts();
+        // Filter: must have more than just mac_address (e.g. name, ipaddress, username, etc.)
+        const filtered = (data || []).filter(olt => {
+          const keysToCheck = ['name', 'ipaddress', 'username', 'status'];
+          return keysToCheck.some(key => olt[key] && olt[key] !== '' && olt[key] !== null);
+        });
+        setDevices(filtered);
+      } catch (err) {
+        setDevices([]);
+        setError('Failed to fetch devices from Supabase.');
+      }
+      setLoading(false);
+    }
+    fetchOlts();
+  }, []);
 
   const getStatusColor = (status) => {
     switch(status) {
@@ -219,6 +204,22 @@ const ConfiguredDevices = () => {
     if (value > -25) return 'text-yellow-600';
     return 'text-red-600';
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <span className="text-lg font-semibold">Loading configured devices...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <span className="text-lg font-semibold text-red-600">{error}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -413,45 +414,6 @@ const ConfiguredDevices = () => {
                 Export
               </Button>
             </div>
-          </div>
-          
-          {/* Tabs */}
-          <div className="bg-white rounded-md p-3 mb-6 flex space-x-2">
-            <Button 
-              variant={activeTab === 'all' ? 'default' : 'ghost'} 
-              className={activeTab === 'all' ? 'bg-green-500 text-white' : 'bg-white text-black'}
-              onClick={() => setActiveTab('all')}
-            >
-              All
-            </Button>
-            <Button 
-              variant={activeTab === 'olts' ? 'default' : 'ghost'} 
-              className={activeTab === 'olts' ? 'bg-green-500 text-white' : 'bg-white text-black'}
-              onClick={() => setActiveTab('olts')}
-            >
-              OLTs
-            </Button>
-            <Button 
-              variant={activeTab === 'onts' ? 'default' : 'ghost'} 
-              className={activeTab === 'onts' ? 'bg-green-500 text-white' : 'bg-white text-black'}
-              onClick={() => setActiveTab('onts')}
-            >
-              ONTs
-            </Button>
-            <Button 
-              variant={activeTab === 'switches' ? 'default' : 'ghost'} 
-              className={activeTab === 'switches' ? 'bg-green-500 text-white' : 'bg-white text-black'}
-              onClick={() => setActiveTab('switches')}
-            >
-              Switches
-            </Button>
-            <Button 
-              variant={activeTab === 'routers' ? 'default' : 'ghost'} 
-              className={activeTab === 'routers' ? 'bg-green-500 text-white' : 'bg-white text-black'}
-              onClick={() => setActiveTab('routers')}
-            >
-              Routers
-            </Button>
           </div>
           
           {/* Filters */}
